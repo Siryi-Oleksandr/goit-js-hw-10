@@ -22,3 +22,7 @@ body {
 .country-flag {
   width: 50px;
 }
+
+.country-flag--sm {
+  width: 30px;
+}

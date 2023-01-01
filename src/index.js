@@ -4,6 +4,9 @@ import { fetchCountries } from './js/fetchCountries';
 
 const debounce = require('lodash.debounce');
 const DEBOUNCE_DELAY = 300;
+const infoMessage =
+  'Too many matches found. Please enter a more specific name.';
+const errorMessage = 'Oops, there is no country with that name';
 
 const refs = {
   input: document.querySelector('#search-box'),
@@ -11,30 +14,55 @@ const refs = {
   outputCountryInfo: document.querySelector('.country-info'),
 };
 
+const notifyOptions = {
+  showOnlyTheLastOne: true,
+  clickToClose: true,
+  cssAnimationStyle: 'zoom',
+};
+
 refs.input.addEventListener('input', debounce(onFormInput, DEBOUNCE_DELAY));
 
 // set function
 function onFormInput() {
   const countryName = refs.input.value.trim();
-  fetchCountries(countryName).then(showCountryList).catch(handleError);
-  // подумати чи потрібно очищати форму
+  if (countryName.length > 0) {
+    fetchCountries(countryName).then(showCountries).catch(handleError);
+  } else {
+    clearResultOutput();
+  }
 }
 
-function showCountryInfo(countryData) {
-  const { capital, name, population, flagSrc, languages } =
-    getData(countryData);
+function showCountries(countriesData) {
+  if (countriesData.length > 10) {
+    clearResultOutput();
+    Notify.info(infoMessage, notifyOptions);
+  }
+  if (countriesData.length > 1 && countriesData.length <= 10) {
+    clearResultOutput();
+    showCountriesList(countriesData);
+  }
+  if (countriesData.length === 1) {
+    clearResultOutput();
+    showCountryInfo(countriesData);
+  }
+}
+
+// render one country, which satisfy the request
+function showCountryInfo(countriesData) {
+  const receivedItem = getData(countriesData);
+  const { capital, name, population, flagSrc, languages } = receivedItem[0];
   refs.outputCountryInfo.innerHTML = `<div class="country-name__wrapper">
       <img class="country-flag" src="${flagSrc}" alt="flag of the country ${name}">
       <h1 class="country-name">${name}</h1>
-    </div><p><b>Capital: </b>${capital}</p>
-    <p><b>Population: </b>${population}</p>
-    <p><b>Languages: </b>${languages}</p>`;
+    </div><p class="country-info__text"><b>Capital: </b>${capital}</p>
+    <p class="country-info__text"><b>Population: </b>${population}</p>
+    <p class="country-info__text"><b>Languages: </b>${languages}</p>`;
 }
 
 // render list of the countries, which satisfy the request
-function showCountryList(countriesData) {
+function showCountriesList(countriesData) {
   const countriesList = getData(countriesData);
-  const listCountriesMarkup = countriesList
+  refs.outputList.innerHTML = countriesList
     .map(
       ({
         flagSrc,
@@ -43,18 +71,9 @@ function showCountryList(countriesData) {
       <p class="country-name--sm">${name}</p></li>`
     )
     .join('');
-
-  refs.outputList.innerHTML = listCountriesMarkup;
-  /* 
-  <li class="country-list__item"><img class="country-flag--sm" src="" alt="" />
-      <p class="country-name--sm"></p></li>
-  */
 }
 
-function handleError(error) {
-  Notify.failure('Oops, there is no country with that name');
-}
-
+// receive necessary data from backend's fetch
 function getData(countriesData) {
   const receivedDataArray = countriesData.map(elem => {
     const receivedData = {};
@@ -68,19 +87,12 @@ function getData(countriesData) {
   return receivedDataArray;
 }
 
-/* function getData(countryData) {
-  const receivedData = {};
-  countryData.forEach(elem => {
-    receivedData.capital = elem.capital.join(', ');
-    receivedData.name = elem.name.official;
-    receivedData.population = elem.population;
-    receivedData.flagSrc = elem.flags.svg;
-    receivedData.languages = Object.values(elem.languages).join(', ');
-  });
-  return receivedData;
-} */
+function clearResultOutput() {
+  refs.outputCountryInfo.innerHTML = '';
+  refs.outputList.innerHTML = '';
+}
 
-// ukraine
-// united
-// tanzan
-// South Africa
+function handleError(error) {
+  clearResultOutput();
+  Notify.failure(errorMessage, notifyOptions);
+}

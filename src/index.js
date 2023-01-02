@@ -7,6 +7,11 @@ const DEBOUNCE_DELAY = 300;
 const infoMessage =
   'Too many matches found. Please enter a more specific name.';
 const errorMessage = 'Oops, there is no country with that name';
+const notifyOptions = {
+  showOnlyTheLastOne: true,
+  clickToClose: true,
+  cssAnimationStyle: 'zoom',
+};
 
 const refs = {
   input: document.querySelector('#search-box'),
@@ -14,21 +19,16 @@ const refs = {
   outputCountryInfo: document.querySelector('.country-info'),
 };
 
-const notifyOptions = {
-  showOnlyTheLastOne: true,
-  clickToClose: true,
-  cssAnimationStyle: 'zoom',
-};
-
 refs.input.addEventListener('input', debounce(onFormInput, DEBOUNCE_DELAY));
 
 // set function
 function onFormInput() {
   const countryName = refs.input.value.trim();
-  if (countryName.length > 0) {
-    fetchCountries(countryName).then(showCountries).catch(handleError);
-  } else {
+  if (!countryName) {
     clearResultOutput();
+    return;
+  } else {
+    fetchCountries(countryName).then(showCountries).catch(handleError);
   }
 }
 
@@ -75,16 +75,15 @@ function showCountriesList(countriesData) {
 
 // receive necessary data from backend's fetch
 function getData(countriesData) {
-  const receivedDataArray = countriesData.map(elem => {
-    const receivedData = {};
-    receivedData.capital = elem.capital.join(', ');
-    receivedData.name = elem.name.official;
-    receivedData.population = elem.population;
-    receivedData.flagSrc = elem.flags.svg;
-    receivedData.languages = Object.values(elem.languages).join(', ');
-    return receivedData;
+  return countriesData.map(elem => {
+    return {
+      capital: elem.capital.join(', '),
+      name: elem.name.official,
+      population: elem.population,
+      flagSrc: elem.flags.svg,
+      languages: Object.values(elem.languages).join(', '),
+    };
   });
-  return receivedDataArray;
 }
 
 function clearResultOutput() {
